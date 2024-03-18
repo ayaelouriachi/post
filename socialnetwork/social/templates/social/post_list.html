@@ -1,0 +1,82 @@
+{% extends 'landing/base.html' %}
+{% load crispy_forms_tags %}
+{% load static %}
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center mt-3">
+        <div class="col-md-5 col-sm-12 border-bottom">
+            <h5>Add a Post!</h5>
+        </div>
+    </div>
+
+    <div class="row justify-content-center mt-3 mb-5">
+        <div class="col-md-5 col-sm-12 border-bottom">
+            <form method="post" enctype="multipart/form-data"> <!-- Ensure correct encoding type -->
+                {% csrf_token %}
+                {% for field in form %}
+                <div class="mb-3">
+                    {{ field.label_tag }}
+                    {% if field.widget.is_hidden %}
+                        {{ field }}
+                    {% elif field.widget.input_type == 'textarea' %}
+                        <textarea class="form-control" style="width: 100%;" name="{{ field.name }}" id="{{ field.id_for_label }}">{{ field.value|default:'' }}</textarea>
+                    {% elif field.widget.input_type == 'file' %} <!-- Add this condition for file input -->
+                        <input type="file" class="form-control" name="{{ field.name }}" id="{{ field.id_for_label }}">
+                    {% else %}
+                        {{ field }}
+                    {% endif %}
+                    {% if field.help_text %}
+                        <small class="text-muted">{{ field.help_text }}</small>
+                    {% endif %}
+                </div>
+            {% endfor %}
+            <button class="btn btn-success mt-3" style="width: 75%;">Submit!</button>
+        </div>
+        </div>
+        <div class="d-grid gap-2">
+            
+    </form>
+</div>
+</div>
+
+{% for post in post_list %}
+<div class="row justify-content-center mt-3" >
+    <div class="col-md-5 col-sm-12 border-bottom position-relative" >
+        <p><strong>{{ post.author }} </strong>{{ post.created_on }}</p>
+        <div class="position-relative"><p>{{ post.body }}</p>
+            {% if post.image %}
+                <img style="max-width: 100%; height: auto; border-radius: 10px; margin-bottom: 10px;" src="{{ post.image.url }}" alt="Example Image" />
+            {% endif %}
+            {% if post.video %} <!-- Add condition to display video -->
+                <video controls style="max-width: 100%; height: auto; border-radius: 10px; margin-bottom: 10px;">
+                    <source src="{{ post.video.url }}" type="video/mp4">
+                    Your browser does not support the video tag.
+                </video>
+            {% endif %}
+          
+            
+            <a href="{% url 'post-detail' post.pk %}" class="stretched-link"></a>
+        </div>
+
+        <div class="d-flex flex-row" style="display: block;">
+            <form method="POST" action="{% url 'like' post.pk %}">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ request.path }}">
+                <button style="background-color: transparent; border: none; box-shadow: none;" type="submit">
+                    <i class="far fa-thumbs-up"> <span>{{ post.likes.all.count }}</span></i>
+                </button>
+            </form>
+
+            <form method="POST" action="{% url 'dislike' post.pk %}">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ request.path }}">
+                <button style="background-color: transparent; border: none; box-shadow: none;" type="submit">
+                    <i class="far fa-thumbs-down"> <span>{{ post.dislikes.all.count }}</span></i>
+                </button>
+            </form>
+            
+    </div>
+</div>
+{% endfor %}
+</div>
+{% endblock content %}

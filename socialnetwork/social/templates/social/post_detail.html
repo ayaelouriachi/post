@@ -1,0 +1,170 @@
+{% extends 'landing/base.html' %}
+{% load crispy_forms_tags %}
+{% load static %}
+{% block content %}
+<div class="container">
+    <div class="row mt-5">
+        <div class="col-md-5 col-sm-6">
+            <a href="{% url 'post-list' %}" class="btn btn-light">Back To Feed</a>
+        </div>
+    </div>
+
+    <div class="row justify-content-center mt-3">
+        <div class="col-md-5 col-sm-12 border-bottom">
+            <p>
+                <strong>{{ post.author }}</strong> {{ post.created_on }}
+                {% if request.user == post.author %}
+                    <a href="{% url 'post-edit' post.pk %}" style="color: #333;"><i class="far fa-edit"></i></a>
+                    <a href="{% url 'post-delete' post.pk %}" style="color: #333;"><i class="fas fa-trash"></i></a>
+                {% endif %}
+            </p>
+            <p>{{ post.body }}</p>
+            {% if post.image %}
+    <img style="max-width: 100%; height: auto; border-radius: 10px; margin-bottom: 10px;" src="{{ post.image.url }}" alt="Example Image" />
+{% endif %}
+{% if post.video %} <!-- Add condition to display video -->
+                <video controls style="max-width: 100%; height: auto; border-radius: 10px; margin-bottom: 10px;">
+                    <source src="{{ post.video.url }}" type="video/mp4">
+                    Your browser does not support the video tag.
+                </video>
+            {% endif %}
+            <div class="d-flex flex-row">
+                <form method="POST" action="{% url 'like' post.pk %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="next" value="{{ request.path }}">
+                    <button style="background-color: transparent; border: none; box-shadow: none;" type="submit">
+                        <i class="far fa-thumbs-up"> <span>{{ post.likes.all.count }}</span></i>
+                    </button>
+                </form>
+
+                <form method="POST" action="{% url 'dislike' post.pk %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="next" value="{{ request.path }}">
+                    <button style="background-color: transparent; border: none; box-shadow: none;" type="submit">
+                        <i class="far fa-thumbs-down"> <span>{{ post.dislikes.all.count }}</span></i>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="row justify-content-center mt-3 mb-5">
+        <div class="col-md-5 col-sm-12">
+            <form method="POST">
+                {% csrf_token %}
+                {% for field in form %}
+                    <div class="mb-3">
+                        {{ field.label_tag }}
+                        {% if field.widget.is_hidden %}
+                            {{ field }}
+                        {% elif field.widget.input_type == 'textarea' %}
+                            <textarea class="form-control" style="width: 100%;" name="{{ field.name }}" id="{{ field.id_for_label }}">{{ field.value|default:'' }}</textarea>
+                        {% else %}
+                            {{ field }}
+                        {% endif %}
+                        {% if field.help_text %}
+                            <small class="text-muted">{{ field.help_text }}</small>
+                        {% endif %}
+                    </div>
+                {% endfor %}
+                <button class="btn btn-success mt-3" style="width: 75%;">Submit!</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="d-grid gap-2">
+    </div>
+</div>
+
+{% for comment in comments %}
+    {% if comment.is_parent %}
+        <div class="row justify-content-center mt-3 mb-5">
+            <div class="col-md-5 col-sm-12 border-bottom">
+                <p>
+                    <div>
+                        <!-- Remove the profile-related code and replace with the author's name -->
+                        <strong>{{ comment.author }}</strong>
+                    </div>
+                    {% if request.user == comment.author %}
+                        <!-- Remove or modify any profile-related links here -->
+                        <a href="{% url 'comment-delete' post.pk comment.pk %}" class="edit-color"><i class="fas fa-trash"></i></a>
+                    {% endif %}
+                </p>
+                <p>{{ comment.comment }}</p>
+
+                <div class="d-flex flex-row">
+                    <form method="POST" action="{% url 'comment-like' post.pk comment.pk %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="next" value="{{ request.path }}">
+                        <button style="background-color: transparent; border: none; box-shadow: none;" type="submit">
+                            <i class="far fa-thumbs-up"> <span>{{ comment.likes.all.count }}</span></i>
+                        </button>
+                    </form>
+    
+                    <form method="POST" action="{% url 'comment-dislike' post.pk comment.pk %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="next" value="{{ request.path }}">
+                        <button style="background-color: transparent; border: none; box-shadow: none;" type="submit">
+                            <i class="far fa-thumbs-down"> <span>{{ comment.dislikes.all.count }}</span></i>
+                        </button>
+                    </form>
+                    <div>
+                        <button style="background-color: transparent; border: none; box-shadow: none;"><i class="far fa-comment-dots" onclick="commentReplyToggle('{{ comment.pk }}')"></i></button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row justify-content-center mt-3 mb-5 d-none" id="{{ comment.pk }}">
+            <div class="col-md-5 col-sm-12">
+                <form method="POST" action="{% url 'comment-reply' post.pk comment.pk %}">
+                    {% csrf_token %}
+                    {% for field in form %}
+                        <div class="mb-3">
+                            {{ field.label_tag }}
+                            {{ field }}
+                            {% if field.errors %}
+                                <div class="text-danger">
+                                    {{ field.errors|join:", " }}
+                                </div>
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+                    <button class="btn btn-success mt-3" style="width: 75%;">Submit!</button>
+                </form>
+            </div>
+        </div>
+
+        {% for child_comment in comment.children %}
+            <div class="row justify-content-center mt-3 mb-5 child-comment" style="	margin-left: 2rem;">
+                <div class="col-md-5 col-sm-12 border-bottom">
+                    <p>
+                        <div>
+                            <p class="post-text">
+                                <strong>{{ child_comment.author }}</strong>
+                                {{ child_comment.created_on }}
+                            </p>
+                        </div>
+                        {% if request.user == child_comment.author %}
+                            <a href="{% url 'comment-delete' post.pk child_comment.pk %}" class="edit-color"><i class="fas fa-trash"></i></a>
+                        {% endif %}
+                    </p>
+                    <p>{{ child_comment.comment }}</p>
+                </div>
+            </div>
+        {% endfor %}
+    {% endif %}
+{% endfor %}
+
+<script type="text/javascript">
+    function commentReplyToggle(parent_id) {
+      
+        const row = document.getElementById(parent_id);
+
+        if (row.classList.contains('d-none')) {
+            row.classList.remove('d-none');
+        } else {
+            row.classList.add('d-none');
+        }
+    }
+</script>
+{% endblock content %}
